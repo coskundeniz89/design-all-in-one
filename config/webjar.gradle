@@ -1,0 +1,50 @@
+//İleride kullanılabilecek webjarları dependency olarak eklediğimizde
+// hem build işlemi uzun sürüyor, hem de build sonundaki jar 50 mb oluyor.
+
+def findJarsByGroup(Configuration config, groupName) {
+    configurations.compile.files {
+        it.group.equals(groupName)
+    }
+}
+
+ext {
+    srcDir = "${sourceSets.main.resources.srcDirs.toArray()[0]}"
+}
+
+//Bu projenin dosyalarından webjar oluşturur.
+//Html dosyalarını templates pathine, static dosyaları static pathine aktarır.
+//Ayrıca dependency olarak kullanılan webjar var ise onun içindeki dosyaları da aktarır.
+task webjar(type: Jar, dependsOn: "jar") {
+    baseName = "${project.name}" + "-webjar"
+    from(fileTree(srcDir + "/templates")) {
+        into "META-INF/resources/templates"
+    }
+    from(fileTree(srcDir + "/static")) {
+        into "META-INF/resources/static"
+    }
+    findJarsByGroup(configurations.compile, 'org.webjars').each {
+        from(zipTree(it)) {
+            include("**/*.js", "**/*.css", "**/*.map")
+            include("**/fonts/**", "**/font/**")
+        }
+        includeEmptyDirs = false
+    }
+}
+
+////Dependency olarak kullanılan webjarları static klasörünün altına generated olarak açar.
+////Js, css vb. dosyaları, html dosyalarını statik olarak görüntüleyebilmek için generated klasörüne atıldı.
+////Thymeleaf kullanımında ise generated klasörü kullanılmalı.
+//task generateWebJar() {
+//    copy {
+//        findJarsByGroup(configurations.compile, 'org.webjars').each {
+//            from(zipTree(it)) {
+//                include("**/*.js", "**/*.css", "**/*.map")
+//                include("**/fonts/**", "**/font/**")
+//            }
+//            into(srcDir)
+//            includeEmptyDirs = false
+//        }
+//    }
+//    ant.move(file: srcDir + "/META-INF/resources", tofile: srcDir)
+//    delete(srcDir + "/META-INF/")
+//}
